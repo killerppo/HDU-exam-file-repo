@@ -3,18 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <div class="title">
-        Hello
-    </div>
-
-
+    <title>文件上传和下载</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
-        .title{
-            background-color: antiquewhite;
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+        .message {
+            margin-top: 10px;
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        input[type="file"] {
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
         }
     </style>
+</head>
+<body>
+
+<div id="app" class="container">
+    <h1>文件上传和下载</h1>
+
+    <!-- 文件上传部分 -->
+    <div>
+        <input type="file" @change="onFileChange" />
+        <button @click="uploadFile">上传文件</button>
+        <p v-if="uploadMessage" :class="{'message': !uploadError, 'error': uploadError}">{{ uploadMessage }}</p>
+    </div>
+
+    <!-- 文件下载部分 -->
+    <div style="margin-top: 20px;">
+        <input type="text" v-model="filename" placeholder="输入文件名" />
+        <button @click="downloadFile">下载文件</button>
+    </div>
+</div>
+
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            file: null,
+            filename: '',
+            uploadMessage: '',
+            uploadError: false
+        },
+        methods: {
+            onFileChange(event) {
+                this.file = event.target.files[0];
+            },
+            async uploadFile() {
+                if (!this.file) {
+                    this.uploadMessage = '请选择一个文件';
+                    this.uploadError = true;
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('file', this.file);
+
+                try {
+                    const response = await axios.post('http://localhost:5000/upload', formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
+                    });
+                    this.uploadMessage = response.data.message;
+                    this.uploadError = false;
+                } catch (error) {
+                    this.uploadMessage = '文件上传失败';
+                    this.uploadError = true;
+                }
+            },
+            async downloadFile() {
+                if (!this.filename) {
+                    alert('请输入文件名');
+                    return;
+                }
+                try {
+                    const response = await axios.get(`http://localhost:5000/download/${this.filename}`, {
+                        responseType: 'blob'
+                    });
+                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', this.filename); // 设置下载文件名
+                    document.body.appendChild(link);
+                    link.click();
+                } catch (error) {
+                    alert('文件下载失败，文件不存在');
+                }
+            }
+        }
+    });
+</script>
+
 </body>
 </html>
